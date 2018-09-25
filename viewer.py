@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-import curses, textwrap, fileinput, json, webbrowser, subprocess
+import curses, textwrap, fileinput, json
+import webbrowser, subprocess, string, locale
 
 """
 Bunch of todos:
@@ -30,16 +31,42 @@ Bunch of todos:
 - [ ] 
 """
 
+def count(string, char, skip_whitespace=False, return_offset=False):
+    i, result = 0, 0
+    for i, c in enumerate(string):
+        if skip_whitespace and c.isspace():
+            continue
+        if c in char:
+            result += 1
+        else:
+            break
+    if return_offset:
+        return result, i
+    return result
+
 def md_wrap(text, width=70):
     text = text.replace("&gt;", ">").replace("&lt;", "<").replace("&amp;", "&")
     lines = []
     for paragraph in text.split("\n\n"):
         if paragraph.startswith("    "):
             lines.extend(paragraph.split("\n"))
+        elif paragraph.startswith(">"):
+            items = paragraph.split("\n")
+            for item in items:
+                level, offset = count(item, ">", True, True)
+                if offset < level:
+                    lines.append(">" * level)
+                offset = max(level, offset)
+                for line in textwrap.wrap(item[offset:], width - level - 1):
+                    lines.append(">" * level + " " + line)
         elif paragraph.startswith("- ") or paragraph.startswith("-\t"):
             items = paragraph.split("\n")
             for item in items:
-                lines.extend(textwrap.wrap(item, width))
+                level, offset = count(item, "-", True, True)
+                for i, line in enumerate(textwrap.wrap(
+                        item[offset:], width - level*2 - 1)):
+                    lines.append("  " * (level-1) + ("  ", "- ")[i == 0] + line)
+                #lines.extend(textwrap.wrap(item, width))
         else:
             lines.extend(textwrap.wrap(paragraph, width))
         lines.append("")
@@ -68,18 +95,32 @@ def bind(value, start, end):
     return max(start, min(value, end))
 
 class Interface(object):
-    def __init__(self, stdscr):
+    def __init__(self, stdscr, data):
         curses.use_default_colors()
         if curses.has_colors():
             curses.init_pair(1, curses.COLOR_WHITE, curses.COLOR_BLUE)
             curses.init_pair(2, 0, curses.COLOR_GREEN)
             curses.init_pair(3, curses.COLOR_BLUE, -1)
+        self.data = data
+        self.filter = None
         self.stdscr = stdscr
         self.Y, self.X = stdscr.getmaxyx()
         self.title  = curses.newwin(2, self.X, 0, 0)
         self.main   = curses.newwin(self.Y-2, self.X, 2, 0)
         curses.curs_set(0)
         self.show()
+
+    def get_data(self):
+        if self.filter is None:
+            return self.data
+        new_list = []
+        for item in self.data:
+            if any((type(v) is str and self.filter in v) for v in item.values()):
+                new_list.append(item)
+        return new_list
+        return list(filter(
+            lambda i: (print(i), any(self.filter in v for v in i.values()))[1],
+            self.data))
 
     def refresh(self):
         self.stdscr.refresh()
@@ -89,7 +130,13 @@ class Interface(object):
     def show(self):
         cursor = 0
         while True:
-            self.display_title(right="{}/{}".format(cursor+1, len(data)))
+            data = self.get_data()
+            if self.filter is None:
+                self.display_title(right="{}/{}".format(cursor+1, len(data)))
+            else:
+                self.display_title(right="[{}] {}/{}".format(
+                    self.filter, cursor+1, len(data)
+                ))
             self.display_list(cursor)
             self.refresh()
             k = self.stdscr.getkey()
@@ -108,6 +155,32 @@ class Interface(object):
                     move = self.show_entry(cursor)
             elif k == "q":
                 break
+            elif k == "/":
+                if self.filter is None:
+                    self.filter = ""
+                while True:
+                    data = self.get_data()
+                    cursor = bind(cursor, 0, len(data)-1)
+                    self.display_title(right="[{}] {}/{}".format(
+                        self.filter, cursor+1, len(data)
+                    ))
+                    self.display_list(cursor)
+                    self.refresh()
+                    k = self.stdscr.getkey()
+                    if k in ("KEY_ENTER", "\n", "\r"):
+                        break
+                    elif k in ("\x1b",):
+                        self.filter = None
+                        break
+                    elif k in ("KEY_BACKSPACE", "KEY_DC"):
+                        self.filter = self.filter[:-1]
+                        if len(self.filter) < 1:
+                            self.filter = None
+                            break
+                    elif k in string.printable:
+                        self.filter += k
+                    else:
+                        break
 
     def display_title(self, left="q:quit h:help", right=""):
         self.title.clear()
@@ -120,21 +193,26 @@ class Interface(object):
         self.main.clear()
         self.main.attrset(curses.color_pair(1))
         self.main.insstr(0, 0, " " * self.X)
-        self.main.insstr(0, 0, "{:60} {:20}".format("Title", "Subreddit"))
+        self.main.insstr(0, 0, "{:58} {:20}".format("Title", "Subreddit"))
         self.main.attrset(0)
         start, end = max(0, cursor-(self.Y-3-1)), max(self.Y-3, cursor+1)
+        data = self.get_data()
         for i, item in enumerate(data):
             if not start <= i < end:
                 continue
             pos = 1 + i - start
             if i == cursor:
                 self.main.attrset(curses.color_pair(2))
+            # BUG: this errors somewhere around my 300th comment
             self.main.insstr(pos, 0, " " * self.X)
-            title = item.get("title", item.get("link_title"))[:60]
-            self.main.insstr(pos, 0, "{0:60} /u/{1:20}".format(title, item["subreddit"]))
+            title = item.get("title", item.get("link_title"))[:58]
+            title = "".join(filter(lambda c: c in string.printable, title))
+            sub = item["subreddit"][:17]
+            self.main.insstr(pos, 0, "{0:58} /r/{1:17}".format(title, sub))
             self.main.attrset(0)
 
     def show_entry(self, cursor):
+        data = self.get_data()
         entry = data[cursor]
         if "body" in entry:
             lines, line, kind = md_wrap(entry.get("body"), self.X-2), 0, "Comment"
@@ -171,6 +249,7 @@ class Interface(object):
     def display_entry(self, entry):
         self.main.clear()
         title = entry.get("title", entry.get("link_title"))
+        title = "".join(filter(lambda c: c in string.printable, title))
         url = entry.get("url", "https://reddit.com/" + entry.get("permalink"))
         pos = 0
         self.main.attrset(curses.A_BOLD)
@@ -202,6 +281,10 @@ class Interface(object):
 
 if __name__ == "__main__":
     data = []
+    tail = []
     for line in fileinput.input():
         data.append(json.loads(line))
-    curses.wrapper(Interface)
+    locale.setlocale(locale.LC_ALL, "")
+    curses.wrapper(Interface, data)
+    print("\n".join(tail))
+    

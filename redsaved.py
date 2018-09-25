@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-import requests, time, json, sys
+import requests, time, json, sys, os
 
 FEED_URL = "https://www.reddit.com/user/{user}/saved.json?feed={feed}&user={user}&after={after}"
-MAX_SAVED, DELAY = 1000, 2
+MAX_SAVED = int(os.environ.get("MAX_SAVED", 1000))
+DELAY = int(os.environ.get("DELAY", 2))
 HEADERS = {
     "User-Agent": "linux:get-saved-comments:0.1.0 (by /u/mftrhu)"
 }

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import curses, textwrap, fileinput, json
+import curses, textwrap, fileinput, json, os, os.path, shlex
 import webbrowser, subprocess, string, locale, datetime
 
 def bind(value, start, end):
@@ -90,6 +90,38 @@ def img2text(url, width):
         p.kill()
         outs, errs = p.communicate()
 
+def get_entry_value(entry, key):
+    if key in ("text", "body"):
+        value = entry.get("selftext", entry.get("body", ""))
+    elif key in ("url", "address"):
+        value = entry.get("url", "https://reddit.com/" + entry.get("permalink"))
+    else:
+        value = entry.get(key)
+    return value
+
+def pipe_to(command_line, text):
+    curses.endwin()
+    command = shlex.split(command_line)
+    subproc = subprocess.Popen(command, stdin=subprocess.PIPE)
+    subproc.communicate(text.encode())
+
+def call_with_args(command_line, *args):
+    curses.endwin()
+    command = shlex.split(command_line)
+    command.extend(args)
+    subproc.communicate()
+
+def make_with_pipe(command, pipe):
+    def inner(entry):
+        pipe_to(command, get_entry_value(entry, pipe))
+    return inner
+
+def make_with_args(command, arguments):
+    def inner(entry):
+        args = [get_entry_value(entry, arg) for arg in arguments]
+        call_with_args(command, *args)
+    return inner
+
 class Interface(object):
     def __init__(self, stdscr, data):
         curses.use_default_colors()
@@ -104,7 +136,30 @@ class Interface(object):
         self.title  = curses.newwin(2, self.X, 0, 0)
         self.main   = curses.newwin(self.Y-2, self.X, 2, 0)
         curses.curs_set(0)
+        self.load_config()
         self.show()
+
+    def load_config(self):
+        config_dir = os.environ.get("XDG_CONFIG_HOME", "~/.config/")
+        config_dir = os.path.expanduser(config_dir)
+        config_dir = os.path.join(config_dir, "rviewer")
+        config = {}
+        for path in (".viewerrc", os.path.join(config_dir, "viewerrc")):
+            try:
+                with open(path, "r") as f:
+                    config = json.load(f)
+                    break
+            except FileNotFoundError:
+                pass
+        self.keys = {}
+        for key, action in config.get("keybindings", {}).items():
+            command = action.get("cmd")
+            args = action.get("args", [])
+            pipe = action.get("pipe")
+            if pipe:
+                self.keys[key] = make_with_pipe(command, pipe)
+            else:
+                self.keys[key] = make_with_args(command, args)
 
     def get_data(self):
         if self.filter is None:
@@ -158,8 +213,6 @@ class Interface(object):
                 while move is not None:
                     cursor = bind(cursor + move, 0, len(data)-1)
                     move = self.show_entry(cursor)
-            elif k == "q":
-                break
             elif k == "/":
                 if self.filter is None:
                     self.filter = ""
@@ -187,6 +240,10 @@ class Interface(object):
                         self.filter += k
                     else:
                         break
+            elif k == "q":
+                break
+            elif k in self.keys:
+                self.keys[k](data[cursor])
 
     def display_title(self, left="q:quit h:help", right=""):
         """
@@ -258,6 +315,8 @@ class Interface(object):
                 webbrowser.open_new_tab(url)
             elif k == "q":
                 return
+            elif k in self.keys:
+                self.keys[k](entry)
 
     def display_entry(self, entry):
         """

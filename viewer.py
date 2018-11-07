@@ -91,24 +91,42 @@ def img2text(url, width):
         outs, errs = p.communicate()
 
 def get_entry_value(entry, key):
+    """
+    Given an `entry` containing Reddit data and a `key`, tries its best to
+    return a value for `key` from `entry`.
+
+    The entry's title can be obtained with `title`, its URL with `url` or
+    `address`, and its text - if any - with `text` or `body`.
+    """
     if key in ("text", "body"):
         value = entry.get("selftext", entry.get("body", ""))
     elif key in ("url", "address"):
         value = entry.get("url", "https://reddit.com/" + entry.get("permalink"))
+    elif key in ("title"):
+        value = entry.get("link_title")
     else:
         value = entry.get(key)
     return value
 
 def pipe_to(command_line, text):
+    """
+    Given a `command_line` and some `text`, call the command specified by
+    the first, piping the latter to its standard input.
+    """
     curses.endwin()
     command = shlex.split(command_line)
     subproc = subprocess.Popen(command, stdin=subprocess.PIPE)
     subproc.communicate(text.encode())
 
 def call_with_args(command_line, *args):
+    """
+    Given a `command_line` and a list of `args`, call the command specified
+    by the first using the latter as arguments.
+    """
     curses.endwin()
     command = shlex.split(command_line)
     command.extend(args)
+    subproc = subprocess.Popen(command)
     subproc.communicate()
 
 def make_with_pipe(command, pipe):

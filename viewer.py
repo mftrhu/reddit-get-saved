@@ -71,25 +71,6 @@ def md_wrap(text, width=70):
         lines.append("")
     return lines
 
-def img2text(url, width):
-    import requests
-    r = requests.get(url, stream=True)
-    i = r.raw.read(-1)
-    p = subprocess.Popen(["img2ansi", "-width", str(width)],
-                         stdin=subprocess.PIPE,
-                         stdout=subprocess.PIPE)
-    try:
-        o, e = p.communicate(i, timeout=2)
-        # Blah.  Doesn't work.  img2ansi returns ANSI escape sequences, but curses
-        # is already handling those and just ignores them.
-        # To parse them out:
-        #     \e[48;5;XXXm sets the background to XXX
-        #     \e[38;5;XXXm sets the foreground to XXX
-        return o.decode('cp437').splitlines()
-    except subprocess.TimeoutExpired:
-        p.kill()
-        outs, errs = p.communicate()
-
 def get_entry_value(entry, key):
     """
     Given an `entry` containing Reddit data and a `key`, tries its best to

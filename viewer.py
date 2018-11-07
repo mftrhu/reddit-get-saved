@@ -82,9 +82,11 @@ def get_entry_value(entry, key):
     if key in ("text", "body"):
         value = entry.get("selftext", entry.get("body", ""))
     elif key in ("url", "address"):
-        value = entry.get("url", "https://reddit.com/" + entry.get("permalink"))
+        value = entry.get("url", "https://reddit.com" + entry.get("permalink"))
+    elif key in ("permalink"):
+        value = "https://reddit.com" + entry.get("permalink")
     elif key in ("title"):
-        value = entry.get("link_title")
+        value = entry.get("title", entry.get("link_title", ""))
     else:
         value = entry.get(key)
     return value
@@ -139,6 +141,22 @@ class Interface(object):
         self.show()
 
     def load_config(self):
+        """
+        Tries to load a JSON-formatted configuration file from either the
+        current folder or $XDG_CONFIG_HOME/rviewer.  It should be called
+        `.viewerrc` for the former, `viewerrc` for the latter.
+
+        It can contain a `keybindings` object, mapping keycodes to actions
+        that the viewer must perform on each entry.  The action should be
+        an object containing `cmd` (specifying the command to be called)
+        and either `pipe` (a string) or `args` (a list of strings).
+
+        A command specified with `pipe` will pipe to `cmd` the contents
+        of `entry[pipe]`; a command specified with `args` will call `cmd`
+        passing the contents of `entry[arg]` as arguments, where each
+        `arg` is one of the items in `args`.
+        """
+        # Load the configuration file
         config_dir = os.environ.get("XDG_CONFIG_HOME", "~/.config/")
         config_dir = os.path.expanduser(config_dir)
         config_dir = os.path.join(config_dir, "rviewer")
@@ -150,6 +168,7 @@ class Interface(object):
                     break
             except FileNotFoundError:
                 pass
+        # Parse the keybindings
         self.keys = {}
         for key, action in config.get("keybindings", {}).items():
             command = action.get("cmd")

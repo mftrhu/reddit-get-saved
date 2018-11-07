@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import curses, textwrap, fileinput, json
-import webbrowser, subprocess, string, locale
+import webbrowser, subprocess, string, locale, datetime
 
 def bind(value, start, end):
     """
@@ -268,18 +268,22 @@ class Interface(object):
         title = "".join(filter(lambda c: c in string.printable, title))
         url = entry.get("url", "https://reddit.com/" + entry.get("permalink"))
         pos = 0
+        # Insert the title
         self.main.attrset(curses.A_BOLD)
         for line in textwrap.wrap(title, self.X-2):
             self.main.insstr(pos, 0, line.center(self.X))
             pos += 1
+        # Shorten link in the middle if too long
         link = url
         if len(link) > self.X - 4:
             begin, end = link[:(self.X-8)//2], link[-(self.X-6)//2:]
             link = begin + "..." + end
+        # Insert link line
         self.main.attrset(curses.color_pair(3))
         self.main.insstr(pos, 0, ("<" + link + ">").center(self.X))
         self.main.attrset(0)
         pos += 1
+        # Insert byline
         if "body" in entry:
             kind = "Comment"
         elif "selftext" in entry and entry["selftext"]:
@@ -288,6 +292,12 @@ class Interface(object):
             kind = "Link"
         byline = "{} by /u/{}".format(kind, entry["author"])
         self.main.insstr(pos, self.X - 1 - len(byline), byline)
+        pos += 1
+        # Insert date
+        ts = entry["created_utc"]
+        date = datetime.datetime.utcfromtimestamp(ts)
+        date = date.strftime("%Y-%m-%d %H:%M")
+        self.main.insstr(pos, self.X - 1 - len(date), date)
         return pos + 1
 
     def display_text(self, lines, line, top):

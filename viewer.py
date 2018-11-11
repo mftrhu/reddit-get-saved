@@ -89,7 +89,7 @@ def get_entry_value(entry, key):
         value = entry.get("title", entry.get("link_title", ""))
     else:
         value = entry.get(key)
-    return value
+    return str(value)
 
 def pipe_to(command_line, text):
     """

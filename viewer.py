@@ -372,6 +372,7 @@ class Interface(object):
         pos += 1
         # Insert date
         ts = entry["created_utc"]
+        ts = float(ts)
         date = datetime.datetime.utcfromtimestamp(ts)
         date = date.strftime("%Y-%m-%d %H:%M")
         self.main.insstr(pos, self.X - 1 - len(date), date)

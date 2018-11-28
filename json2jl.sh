@@ -31,7 +31,7 @@ out_file="${2}"
 
 ## If OUTFILE is absent, generate it from INFILE
 if [ -z "${2}" ]; then
-  out_file="${file%%.json}.jl"
+  out_file="${in_file%%.json}.jl"
 fi
 
 ## Make the dictionary into an array and sort it

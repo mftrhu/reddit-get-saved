@@ -1,0 +1,22 @@
+{
+    "keybindings": {
+        "d": {
+            "pipe": "text",
+            "cmd": "less",
+            "args": []
+        },
+        "u": {
+            "pipe": "text",
+            "cmd": "urlview",
+            "args": []
+        },
+        "y": {
+            "cmd": "./yank.sh",
+            "args": ["title", "permalink", "author"]
+        },
+        "Y": {
+            "cmd": "./yank-all.sh",
+            "args": ["title", "author", "permalink", "created_utc", "text"]
+        }
+    }
+}

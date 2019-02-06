@@ -13,8 +13,7 @@ $ ./redsaved.py > saved.jsonl
 **Subsequent runs:**
 
 ```
-$ MAX_SAVED=100 ./redsaved.py > $(date +"%Y-%m-%d").jsonl
-$ ./merge.py $(date +"%Y-%m-%d").jsonl saved.jsonl | sponge saved.jsonl
+$ MAX_SAVED=100 ./update.sh
 ```
 
 ### `redsaved.py`
@@ -32,6 +31,14 @@ Put your username and hash inside a `config.json` file in the folder from where 
 
 `redsaved` will, by default, try to download all your saved items, but this can be changed by setting the `MAX_SAVED` environment variable while calling it.  It will output them to standard output, in JSON lines format.
 
+### `update.sh`
+
+**Usage:** `update.sh`
+
+`update.sh` takes care of invoking `redsaved.py` to download any new saved items to a temporary file, and of calling `merge.py` to merge them with the items that were saved previously.
+
+Its behaviour can be partly configured by modifying its "user variables" section.  It will default to downloading one hundred items per run, but that number can be modified by setting the `MAX_SAVED` environment variable.
+
 ### `merge.py`
 
 **Usage:** `merge.py FILE...`
@@ -45,6 +52,29 @@ Put your username and hash inside a `config.json` file in the folder from where 
 `viewer.py` is a curses-based viewer for JSON lines-formatted files.
 
 #### Keybindings
+
+`viewer.py` has two main "modes", with slightly different keybindings: the list view, and the entry view.  The former displays a list of all the items in the JSON lines file, while the latter shows a single entry in detail.
+
+##### List view
+
+- `<up>`: move the cursor one entry up.
+- `<down>`: move the cursor one entry down.
+- `<page_up>`: move the cursor one screenful of entries up.
+- `<page_down>`: move the cursor one screenful of entries down.
+- `q`: exit `viewer.py`
+- `/`: enter filter mode until `<return>` is pressed.  Only entries containing the entered text in one of their fields will be displayed until the filter is cleared with `<escape>`.
+- `<return>`: enter entry view for the currently selected entry.
+
+##### Entry view
+
+- `<up>`: scroll the text of the entry one line up.
+- `<down>`: scroll the text of the entry one line down.
+- `<page_up>`: scroll the text of the entry one screenful of lines up.
+- `<page_down>`: scroll the text of the entry one screenful of lines down.
+- `<left>`, `h`: move to the previous entry.
+- `<right>`, `l`: move to the next entry.
+- `q`: quit entry view.
+- `o`: open the permalink of the currently selected entry in the browser.
 
 #### Configuration file
 

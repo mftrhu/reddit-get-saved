@@ -51,6 +51,23 @@ Its behaviour can be partly configured by modifying its "user variables" section
 
 `viewer.py` is a curses-based viewer for JSON lines-formatted files.
 
+#### Columns
+
+The columns displayed in the list view can be specified in the config file, in the `columns` object.  It must be a list of objects, each containing a numeric `width`, the `title` of the column, and the `key` to be displayed.
+
+`width` should be the width of the columns, in characters, when the display is a standard 80x25.  The actual width will be calculated against the width of the screen when `viewer.py` is launched.
+
+Each column will be displayed offset by one character from the previous one, so the sum of the `width`s **should not** be equal to 80.
+
+The default configuration is
+
+``` json
+"columns": [
+    {"width": 58, "title": "Title", "key": "title"},
+    {"width": 20, "title": "Subreddit", "key": "subreddit"}
+]
+```
+
 #### Keybindings
 
 `viewer.py` has two main "modes", with slightly different keybindings: the list view, and the entry view.  The former displays a list of all the items in the JSON lines file, while the latter shows a single entry in detail.

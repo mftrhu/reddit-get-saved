@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 import curses, textwrap, fileinput, json, os, os.path, shlex
-import webbrowser, subprocess, string, locale, datetime
+import webbrowser, subprocess, string, locale, datetime, math
 
 def bind(value, start, end):
     """
@@ -178,6 +178,13 @@ class Interface(object):
                 self.keys[key] = make_with_pipe(command, pipe)
             else:
                 self.keys[key] = make_with_args(command, args)
+        # Parse the columns
+        self.columns = [
+            {"width": 58, "title": "Title", "key": "title"},
+            {"width": 20, "title": "Subreddit", "key": "subreddit"}
+        ]
+        if "columns" in config:
+            self.columns = config["columns"]
 
     def get_data(self):
         if self.filter is None:
@@ -280,7 +287,11 @@ class Interface(object):
         self.main.clear()
         self.main.attrset(curses.color_pair(1))
         self.main.insstr(0, 0, " " * self.X)
-        self.main.insstr(0, 0, "{:58} {:20}".format("Title", "Subreddit"))
+        pos_x = 0
+        for column in self.columns:
+            width = math.floor(column["width"] * (self.X / 80))
+            self.main.insstr(0, pos_x, column["title"][:width])
+            pos_x += width + 1
         self.main.attrset(0)
         start, end = max(0, cursor-(self.Y-3-1)), max(self.Y-3, cursor+1)
         data = self.get_data()
@@ -291,10 +302,13 @@ class Interface(object):
             if i == cursor:
                 self.main.attrset(curses.color_pair(2))
             self.main.insstr(pos, 0, " " * self.X)
-            title = item.get("title", item.get("link_title"))[:58]
-            title = "".join(filter(lambda c: c in string.printable, title))
-            sub = item["subreddit"][:17]
-            self.main.insstr(pos, 0, "{0:58} /r/{1:17}".format(title, sub))
+            pos_x = 0
+            for column in self.columns:
+                width = math.floor(column["width"] * (self.X / 80))
+                value = get_entry_value(item, column["key"])
+                value = "".join(filter(lambda c: c in string.printable, value))
+                self.main.insstr(pos, pos_x, value[:width])
+                pos_x += width + 1
             self.main.attrset(0)
 
     def show_entry(self, cursor):

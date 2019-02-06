@@ -2,6 +2,12 @@
 
 > An unimaginatively named set of Python scripts to download *and* visualize one's Reddit saved items
 
+## Screenshots
+
+![List view](screenshots/list_view.png?raw=true)
+
+![Entry view](screenshots/entry_view.png?raw=true)
+
 ## Usage
 
 **First run:**

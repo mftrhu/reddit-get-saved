@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import requests, time, json, sys, os
+import urllib.request, time, json, sys, os
 
 FEED_URL = "https://www.reddit.com/user/{user}/saved.json?feed={feed}&user={user}&after={after}"
 MAX_SAVED = int(os.environ.get("MAX_SAVED", 1000))
@@ -19,8 +19,13 @@ except FileNotFoundError:
 after, saved = "null", 0
 while saved < MAX_SAVED:
     print("Getting next chunk...", file=sys.stderr)
-    r = requests.get(FEED_URL.format(after=after, **user_data), headers=HEADERS)
-    j = r.json()
+    # This might be frail
+    r = urllib.request.Request(url=FEED_URL.format(after=after, **user_data))
+    for k, v in HEADERS.items():
+        r.add_header(k, v)
+    with urllib.request.urlopen(r) as response:
+        data = response.read()
+        j = json.loads(data.decode())
     # 429 means we made too many requests - wait it out
     if j.get("error") == 429:
         print("Warning: Downloader rate-limited for the next {} seconds".format(

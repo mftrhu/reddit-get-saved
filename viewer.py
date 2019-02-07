@@ -270,12 +270,12 @@ class Interface(object):
             elif k in self.keys:
                 self.keys[k](data[cursor])
 
-    def display_title(self, left="q:quit h:help", right=""):
+    def display_title(self, left="q:quit", right=""):
         """
         Draws the title window.
         """
         self.title.clear()
-        self.title.insstr(0, 0, "jsonl-viewer v.0.1.0 | " + left)
+        self.title.insstr(0, 0, "jsonl-viewer v.0.2.0 | " + left)
         if right:
             self.title.insstr(0, self.X - len(right), right)
         self.title.hline(1, 0, curses.ACS_HLINE, self.X)
@@ -324,7 +324,7 @@ class Interface(object):
         else:
             lines, line, kind = [], 0, "Link"
         while True:
-            self.display_title("q:quit h:help o:browse", right="{}/{}".format(
+            self.display_title("q:quit o:browse", right="{}/{}".format(
                 cursor+1, len(data)))
             top = self.display_entry(entry)
             self.display_text(lines, line, top)

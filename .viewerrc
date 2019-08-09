@@ -17,6 +17,10 @@
         "Y": {
             "cmd": "./yank-all.sh",
             "args": ["title", "author", "permalink", "created_utc", "text"]
+        },
+        "O": {
+            "cmd": "palemoon",
+            "args": ["permalink"]
         }
     }
 }

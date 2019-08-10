@@ -10,10 +10,11 @@ HEADERS = {
 
 # Load configuration file w. secret data
 try:
-    with open("config.json", "r") as config_file:
+    config = sys.argv[1] if len(sys.argv) > 1 else "config.json"
+    with open(config, "r") as config_file:
         user_data = json.load(config_file)
 except FileNotFoundError:
-    print("Error: no config.json file found", file=sys.stderr)
+    print("Error: no %s file found" % config, file=sys.stderr)
     sys.exit(2)
 
 after, saved = "null", 0
